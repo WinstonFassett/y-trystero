@@ -241,6 +241,8 @@ export class TrysteroConn {
       sendTrysteroConn(this, encoder)
     }
     provider.listenDocData((data, peerId) => {
+      if (this.closed || peerId !== this.remotePeerId) return
+
       const arr = /** @type {Uint8Array} */ (data)
       try {
         const answer = readPeerMessage(this, arr)
@@ -273,7 +275,11 @@ export class TrysteroConn {
   }
 
   destroy () {
-    // console.log("todo: destroy conn(?)");
+    this.closed = true
+    this.connected = false
+
+    // remove from room if still present
+    if (this.room.trysteroConns.has(this.remotePeerId)) this.room.trysteroConns.delete(this.remotePeerId)
   }
 }
 
@@ -588,6 +594,7 @@ export class TrysteroProvider extends ObservableV2Base {
       this.room.destroy()
       rooms.delete(this.roomName)
     }
+    if (this.trystero?.leave) this.trystero.leave()
     this.emit('destroy', [])
     super.destroy()
   }
